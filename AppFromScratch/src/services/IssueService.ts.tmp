@@ -1,0 +1,103 @@
+import { getPowerSdkInstance, type DataSourcesInfo } from '@pa-client/power-code-sdk';
+import type { Issue } from '../types/Issue';
+
+const dataSourcesInfo: DataSourcesInfo = {
+  dataSources: {
+    shared_sql: {
+      type: 'sql',
+      properties: {
+        connectionString: process.env.SQL_CONNECTION_STRING || '',
+      },
+    },
+  },
+};
+
+export class IssueService {
+  private static instance: IssueService;
+  private constructor() {}
+
+  static getInstance(): IssueService {
+    if (!IssueService.instance) {
+      IssueService.instance = new IssueService();
+    }
+    return IssueService.instance;
+  }
+
+  async getIssues(): Promise<Issue[]> {
+    try {
+      // For now, return mock data since we don't have actual SQL connection
+      return [{
+        id: '1',
+        title: 'Sample Issue',
+        description: 'This is a sample issue',
+        status: 'New',
+        priority: 'Medium',
+        createdDate: new Date().toISOString(),
+        updatedDate: new Date().toISOString(),
+        category: 'Bug',
+        tags: ['sample'],
+      }];
+    } catch (error) {
+      console.error('Error fetching issues:', error);
+      throw error;
+    }
+  }
+
+  async createIssue(issue: Omit<Issue, 'id' | 'createdDate' | 'updatedDate'>): Promise<Issue> {
+    try {
+      // For now, return mock data
+      return {
+        id: Math.random().toString(36).substr(2, 9),
+        ...issue,
+        createdDate: new Date().toISOString(),
+        updatedDate: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error('Error creating issue:', error);
+      throw error;
+    }
+  }
+
+  async updateIssue(id: string, updates: Partial<Issue>): Promise<Issue> {
+    try {
+      const currentIssue = await this.getIssueById(id);
+      if (!currentIssue) {
+        throw new Error('Issue not found');
+      }
+      // For now, return mock data
+      return {
+        ...currentIssue,
+        ...updates,
+        updatedDate: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error('Error updating issue:', error);
+      throw error;
+    }
+  }
+
+  async getIssueById(id: string): Promise<Issue | null> {
+    try {
+      // For now, return mock data
+      if (id === '1') {
+        return {
+          id: '1',
+          title: 'Sample Issue',
+          description: 'This is a sample issue',
+          status: 'New',
+          priority: 'Medium',
+          createdDate: new Date().toISOString(),
+          updatedDate: new Date().toISOString(),
+          category: 'Bug',
+          tags: ['sample'],
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching issue:', error);
+      throw error;
+    }
+  }
+}
+
+export const issueService = IssueService.getInstance();

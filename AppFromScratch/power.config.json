@@ -1,0 +1,12 @@
+{
+  "appId": "d0d5ca09-bd5f-4142-9bd6-493180948966",
+  "appDisplayName": "App From Scratch",
+  "description": null,
+  "environmentId": "64f6ea8c-bee1-efbd-bfff-34e8e524dc07",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "logoPath": "Default",
+  "localAppUrl": "http://localhost:3000/",
+  "connectionReferences": {},
+  "databaseReferences": {}
+}
