@@ -1,4 +1,4 @@
-# 🚀 CodeApps
+# 🚀 CodeApps | Issue Tracker App
 
 CodeApps is a modern React-based web application scaffolded with Vite, designed to streamline issue tracking and management. It features modular components, TypeScript support, and a clean development workflow optimized for speed and scalability.
 
