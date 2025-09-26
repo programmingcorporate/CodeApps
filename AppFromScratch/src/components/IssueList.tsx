@@ -19,8 +19,8 @@ import {
   Button,
   tokens,
 } from '@fluentui/react-components';
-import { Dismiss24Regular } from '@fluentui/react-icons';
-import { Search20Regular } from '@fluentui/react-icons';
+import { Dismiss24Regular, Search20Regular, Add24Regular } from '@fluentui/react-icons';
+import { IssueForm } from './IssueForm';
 import type { Issue, IssueFilters, SortField, SortDirection } from '../types/Issue';
 import type { PaginatedResult } from '../types/Pagination';
 import { useNavigate } from 'react-router-dom';
@@ -188,8 +188,39 @@ export const IssueList = () => {
     return <div className={styles.container}>Loading...</div>;
   }
 
+  const handleCreateIssue = async (formData: Omit<Issue, 'id' | 'createdDate' | 'updatedDate'>) => {
+    try {
+      await issueService.createIssue(formData);
+      // Reload the first page to show the new issue
+      setCurrentPage(1);
+      const result = await issueService.getIssues(1, pageSize, searchQuery, {
+        ...filters,
+        sortBy: sortConfig.field,
+        sortDirection: sortConfig.direction
+      });
+      setPaginatedData(result);
+    } catch (error) {
+      console.error('Error creating issue:', error);
+    }
+  };
+
   return (
     <div className={styles.container}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <h1 style={{ margin: 0 }}>Issue Tracker</h1>
+        <IssueForm
+          onSubmit={handleCreateIssue}
+          trigger={
+            <Button 
+              appearance="primary"
+              icon={<Add24Regular />}
+            >
+              Create New Issue
+            </Button>
+          }
+        />
+      </div>
+
       <div className={styles.filtersContainer}>
         <div className={styles.filterGroup}>
           <Input

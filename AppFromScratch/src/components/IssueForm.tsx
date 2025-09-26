@@ -16,7 +16,10 @@ import {
   TagGroup,
   Tag,
   type TagGroupProps,
+  MessageBar,
+  MessageBarBody,
 } from '@fluentui/react-components';
+import { useNavigate } from 'react-router-dom';
 import type { Issue } from '../types/Issue';
 
 const useStyles = makeStyles({
@@ -59,6 +62,7 @@ interface IssueFormProps {
 export const IssueForm = ({ issue, onSubmit, trigger }: IssueFormProps) => {
   const styles = useStyles();
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -69,7 +73,32 @@ export const IssueForm = ({ issue, onSubmit, trigger }: IssueFormProps) => {
     assignedTo: '',
     tags: [] as string[],
   });
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [showSuccess, setShowSuccess] = useState(false);
   const [newTag, setNewTag] = useState('');
+
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+    
+    if (!formData.title.trim()) {
+      newErrors.title = 'Title is required';
+    } else if (formData.title.length < 3) {
+      newErrors.title = 'Title must be at least 3 characters';
+    }
+
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description is required';
+    } else if (formData.description.length < 10) {
+      newErrors.description = 'Description must be at least 10 characters';
+    }
+
+    if (!formData.category.trim()) {
+      newErrors.category = 'Category is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   useEffect(() => {
     if (issue) {
@@ -86,10 +115,16 @@ export const IssueForm = ({ issue, onSubmit, trigger }: IssueFormProps) => {
   }, [issue]);
 
   const handleSubmit = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
     try {
       setLoading(true);
       await onSubmit(formData);
-      setOpen(false);
+      setShowSuccess(true);
+      
+      // Reset form
       setFormData({
         title: '',
         description: '',
@@ -99,9 +134,18 @@ export const IssueForm = ({ issue, onSubmit, trigger }: IssueFormProps) => {
         assignedTo: '',
         tags: [],
       });
+      
+      // Show success message briefly before closing and redirecting
+      setTimeout(() => {
+        setOpen(false);
+        setShowSuccess(false);
+        if (!issue) { // Only redirect for new issues
+          navigate('/');
+        }
+      }, 1500);
     } catch (error) {
       console.error('Error submitting issue:', error);
-      // Here you could show an error message to the user
+      setErrors({ submit: 'Failed to submit issue. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -133,20 +177,50 @@ export const IssueForm = ({ issue, onSubmit, trigger }: IssueFormProps) => {
         <DialogTitle>{issue ? 'Edit Issue' : 'Create New Issue'}</DialogTitle>
         <DialogBody>
           <div className={styles.form}>
-            <Field label="Title" required>
+            {showSuccess && (
+              <MessageBar intent="success">
+                <MessageBarBody>
+                  Issue {issue ? 'updated' : 'created'} successfully! Redirecting...
+                </MessageBarBody>
+              </MessageBar>
+            )}
+            
+            {errors.submit && (
+              <MessageBar intent="error">
+                <MessageBarBody>{errors.submit}</MessageBarBody>
+              </MessageBar>
+            )}
+
+            <Field 
+              label="Title" 
+              required 
+              validationState={errors.title ? "error" : "none"}
+              validationMessage={errors.title}
+            >
               <Input
                 value={formData.title}
-                onChange={(_, data) =>
-                  setFormData(prev => ({ ...prev, title: data.value }))
-                }
+                onChange={(_, data) => {
+                  setFormData(prev => ({ ...prev, title: data.value }));
+                  if (errors.title) {
+                    setErrors(prev => ({ ...prev, title: '' }));
+                  }
+                }}
               />
             </Field>
-            <Field label="Description" required>
+            <Field 
+              label="Description" 
+              required
+              validationState={errors.description ? "error" : "none"}
+              validationMessage={errors.description}
+            >
               <Textarea
                 value={formData.description}
-                onChange={(_, data) =>
-                  setFormData(prev => ({ ...prev, description: data.value }))
-                }
+                onChange={(_, data) => {
+                  setFormData(prev => ({ ...prev, description: data.value }));
+                  if (errors.description) {
+                    setErrors(prev => ({ ...prev, description: '' }));
+                  }
+                }}
               />
             </Field>
             <Field label="Status">
@@ -175,12 +249,20 @@ export const IssueForm = ({ issue, onSubmit, trigger }: IssueFormProps) => {
                 <option value="Critical">Critical</option>
               </Select>
             </Field>
-            <Field label="Category">
+            <Field 
+              label="Category" 
+              required
+              validationState={errors.category ? "error" : "none"}
+              validationMessage={errors.category}
+            >
               <Input
                 value={formData.category}
-                onChange={(_, data) =>
-                  setFormData(prev => ({ ...prev, category: data.value }))
-                }
+                onChange={(_, data) => {
+                  setFormData(prev => ({ ...prev, category: data.value }));
+                  if (errors.category) {
+                    setErrors(prev => ({ ...prev, category: '' }));
+                  }
+                }}
               />
             </Field>
             <Field label="Assigned To">

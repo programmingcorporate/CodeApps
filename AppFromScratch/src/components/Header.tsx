@@ -20,6 +20,16 @@ const useStyles = makeStyles({
     top: 0,
     zIndex: 100,
   },
+  heading: {
+    position: 'absolute',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    fontSize: '1.5rem',
+    fontWeight: 600,
+    color: '#1f2937',
+    whiteSpace: 'nowrap',
+  },
+
   logo: {
     height: '50px',
     width: '50px', // Make it square

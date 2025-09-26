@@ -130,13 +130,17 @@ export class IssueService {
 
   async createIssue(issue: Omit<Issue, 'id' | 'createdDate' | 'updatedDate'>): Promise<Issue> {
     try {
-      // For now, return mock data
-      return {
+      const newIssue = {
         id: Math.random().toString(36).substr(2, 9),
         ...issue,
         createdDate: new Date().toISOString(),
         updatedDate: new Date().toISOString(),
       };
+      
+      // Add the new issue to the beginning of the dummy data array
+      DUMMY_ISSUES.unshift(newIssue);
+      
+      return newIssue;
     } catch (error) {
       console.error('Error creating issue:', error);
       throw error;
