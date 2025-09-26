@@ -17,9 +17,11 @@ import {
   Body1,
   Caption1,
   Button,
+  tokens,
 } from '@fluentui/react-components';
+import { Dismiss24Regular } from '@fluentui/react-icons';
 import { Search20Regular } from '@fluentui/react-icons';
-import type { Issue, IssueFilters } from '../types/Issue';
+import type { Issue, IssueFilters, SortField, SortDirection } from '../types/Issue';
 import type { PaginatedResult } from '../types/Pagination';
 import { useNavigate } from 'react-router-dom';
 import { issueService } from '../services/IssueService';
@@ -40,6 +42,21 @@ const useStyles = makeStyles({
       flexDirection: 'column',
       alignItems: 'stretch',
     },
+  },
+  filtersContainer: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '12px',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '20px',
+  },
+  filterGroup: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '12px',
+    alignItems: 'center',
+    flex: 1,
   },
   table: {
     '@media (max-width: 768px)': {
@@ -87,18 +104,51 @@ const useStyles = makeStyles({
 export const IssueList = () => {
   const styles = useStyles();
   const navigate = useNavigate();
+  // Default sort configuration
+  const defaultSortConfig = {
+    field: 'createdDate' as SortField,
+    direction: 'desc' as SortDirection
+  };
+
   const [filters, setFilters] = useState<IssueFilters>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [paginatedData, setPaginatedData] = useState<PaginatedResult<Issue> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sortConfig, setSortConfig] = useState(defaultSortConfig);
+
+  const handleClearAll = () => {
+    setFilters({});
+    setSearchQuery('');
+    setCurrentPage(1);
+    setSortConfig(defaultSortConfig);
+  };
+
+  const handleSort = (field: SortField) => {
+    // Reset to first page when sorting
+    setCurrentPage(1);
+    
+    setSortConfig(prevConfig => ({
+      field,
+      direction: prevConfig.field === field && prevConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
 
   useEffect(() => {
     const loadIssues = async () => {
       try {
         setLoading(true);
-        const result = await issueService.getIssues(currentPage, pageSize, searchQuery, filters);
+        const result = await issueService.getIssues(
+          currentPage,
+          pageSize,
+          searchQuery,
+          {
+            ...filters,
+            sortBy: sortConfig.field,
+            sortDirection: sortConfig.direction
+          }
+        );
         setPaginatedData(result);
       } catch (error) {
         console.error('Error loading issues:', error);
@@ -113,7 +163,7 @@ export const IssueList = () => {
     }, 300); // 300ms delay
 
     return () => clearTimeout(timer);
-  }, [currentPage, pageSize, searchQuery, filters]);
+  }, [currentPage, pageSize, searchQuery, filters, sortConfig]);
 
   const handleIssueClick = (issueId: string) => {
     navigate(`/issue/${issueId}`);
@@ -140,45 +190,88 @@ export const IssueList = () => {
 
   return (
     <div className={styles.container}>
-      <div className={styles.filters}>
-        <Input
-          placeholder="Search issues..."
-          value={searchQuery}
-          onChange={(_, data) => setSearchQuery(data.value)}
-          contentBefore={<Search20Regular />}
-        />
-        <Select
-          value={filters.status || ''}
-          onChange={(_, data) => setFilters(prev => ({ ...prev, status: data.value as Issue['status'] }))}
+      <div className={styles.filtersContainer}>
+        <div className={styles.filterGroup}>
+          <Input
+            placeholder="Search issues..."
+            value={searchQuery}
+            onChange={(_, data) => setSearchQuery(data.value)}
+            contentBefore={<Search20Regular />}
+          />
+          <Select
+            value={filters.status || ''}
+            onChange={(_, data) => setFilters(prev => ({ ...prev, status: data.value as Issue['status'] }))}
+          >
+            <option value="">All Status</option>
+            <option value="New">New</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Resolved">Resolved</option>
+            <option value="Closed">Closed</option>
+          </Select>
+          <Select
+            value={filters.priority || ''}
+            onChange={(_, data) => setFilters(prev => ({ ...prev, priority: data.value as Issue['priority'] }))}
+          >
+            <option value="">All Priority</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+            <option value="Critical">Critical</option>
+          </Select>
+        </div>
+        
+        <Button
+          appearance="secondary"
+          icon={<Dismiss24Regular />}
+          onClick={handleClearAll}
+          disabled={!searchQuery && Object.keys(filters).length === 0 && 
+            sortConfig.field === defaultSortConfig.field && 
+            sortConfig.direction === defaultSortConfig.direction}
         >
-          <option value="">All Status</option>
-          <option value="New">New</option>
-          <option value="In Progress">In Progress</option>
-          <option value="Resolved">Resolved</option>
-          <option value="Closed">Closed</option>
-        </Select>
-        <Select
-          value={filters.priority || ''}
-          onChange={(_, data) => setFilters(prev => ({ ...prev, priority: data.value as Issue['priority'] }))}
-        >
-          <option value="">All Priority</option>
-          <option value="Low">Low</option>
-          <option value="Medium">Medium</option>
-          <option value="High">High</option>
-          <option value="Critical">Critical</option>
-        </Select>
+          Clear All
+        </Button>
       </div>
 
       {/* Desktop Table View */}
       <Table className={styles.table}>
         <TableHeader>
           <TableRow>
-            <TableHeaderCell>Title</TableHeaderCell>
-            <TableHeaderCell>Status</TableHeaderCell>
-            <TableHeaderCell>Priority</TableHeaderCell>
-            <TableHeaderCell>Category</TableHeaderCell>
-            <TableHeaderCell>Created By</TableHeaderCell>
-            <TableHeaderCell>Created Date</TableHeaderCell>
+            <TableHeaderCell 
+              onClick={() => handleSort('title')}
+              style={{ cursor: 'pointer' }}
+            >
+              Title {sortConfig.field === 'title' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+            </TableHeaderCell>
+            <TableHeaderCell 
+              onClick={() => handleSort('status')}
+              style={{ cursor: 'pointer' }}
+            >
+              Status {sortConfig.field === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+            </TableHeaderCell>
+            <TableHeaderCell 
+              onClick={() => handleSort('priority')}
+              style={{ cursor: 'pointer' }}
+            >
+              Priority {sortConfig.field === 'priority' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+            </TableHeaderCell>
+            <TableHeaderCell 
+              onClick={() => handleSort('category')}
+              style={{ cursor: 'pointer' }}
+            >
+              Category {sortConfig.field === 'category' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+            </TableHeaderCell>
+            <TableHeaderCell 
+              onClick={() => handleSort('assignedTo')}
+              style={{ cursor: 'pointer' }}
+            >
+              Created By {sortConfig.field === 'assignedTo' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+            </TableHeaderCell>
+            <TableHeaderCell 
+              onClick={() => handleSort('createdDate')}
+              style={{ cursor: 'pointer' }}
+            >
+              Created Date {sortConfig.field === 'createdDate' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+            </TableHeaderCell>
           </TableRow>
         </TableHeader>
         <TableBody>

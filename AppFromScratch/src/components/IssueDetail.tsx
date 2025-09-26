@@ -109,8 +109,8 @@ export const IssueDetail = () => {
   const handleDelete = async () => {
     try {
       if (!issue) return;
-      // await issueService.deleteIssue(issue.id);
-      navigate('/issues');
+      await issueService.deleteIssue(issue.id);
+      navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete issue');
     }
@@ -130,7 +130,7 @@ export const IssueDetail = () => {
         className={styles.backButton}
         icon={<ArrowLeft24Regular />}
         appearance="subtle"
-        onClick={() => navigate('/..')}
+        onClick={() => navigate('/')}
       >
         Back to Dashboard
       </Button>

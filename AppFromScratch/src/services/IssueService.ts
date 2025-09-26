@@ -1,4 +1,4 @@
-import type { Issue } from '../types/Issue';
+import type { Issue, SortField, SortDirection } from '../types/Issue';
 import type { PaginatedResult } from '../types/Pagination';
 
 const DUMMY_ISSUES: Issue[] = Array.from({ length: 50 }, (_, index) => ({
@@ -32,7 +32,7 @@ export class IssueService {
     page: number = 1, 
     pageSize: number = 10, 
     search?: string,
-    filters: { status?: string; priority?: string } = {}
+    filters: { status?: string; priority?: string; sortBy?: SortField; sortDirection?: SortDirection } = {}
   ): Promise<PaginatedResult<Issue>> {
     try {
       let filteredIssues = [...DUMMY_ISSUES];
@@ -40,11 +40,45 @@ export class IssueService {
       // Apply search filter
       if (search) {
         const searchLower = search.toLowerCase();
-        filteredIssues = filteredIssues.filter(issue => 
-          issue.title.toLowerCase().includes(searchLower) ||
-          issue.description.toLowerCase().includes(searchLower) ||
-          (issue.assignedTo?.toLowerCase() || '').includes(searchLower)
-        );
+        filteredIssues = filteredIssues.filter(issue => {
+          // Format dates for searching
+          const createdDate = new Date(issue.createdDate);
+          const updatedDate = new Date(issue.updatedDate);
+          
+          const createdDateStr = createdDate.toLocaleDateString();
+          const updatedDateStr = updatedDate.toLocaleDateString();
+          
+          // Also include full month names and abbreviated month names for better searching
+          const createdMonthFull = createdDate.toLocaleString('default', { month: 'long' }).toLowerCase();
+          const createdMonthShort = createdDate.toLocaleString('default', { month: 'short' }).toLowerCase();
+          const updatedMonthFull = updatedDate.toLocaleString('default', { month: 'long' }).toLowerCase();
+          const updatedMonthShort = updatedDate.toLocaleString('default', { month: 'short' }).toLowerCase();
+
+          return (
+            // Search in title
+            issue.title.toLowerCase().includes(searchLower) ||
+            // Search in description
+            issue.description.toLowerCase().includes(searchLower) ||
+            // Search in assigned to
+            (issue.assignedTo?.toLowerCase() || '').includes(searchLower) ||
+            // Search in status
+            issue.status.toLowerCase().includes(searchLower) ||
+            // Search in priority
+            issue.priority.toLowerCase().includes(searchLower) ||
+            // Search in category
+            issue.category.toLowerCase().includes(searchLower) ||
+            // Search in tags
+            (issue.tags && issue.tags.some(tag => tag.toLowerCase().includes(searchLower))) ||
+            // Search in dates
+            createdDateStr.includes(searchLower) ||
+            updatedDateStr.includes(searchLower) ||
+            // Search by month names
+            createdMonthFull.includes(searchLower) ||
+            createdMonthShort.includes(searchLower) ||
+            updatedMonthFull.includes(searchLower) ||
+            updatedMonthShort.includes(searchLower)
+          );
+        });
       }
 
       // Apply status filter
@@ -55,6 +89,26 @@ export class IssueService {
       // Apply priority filter
       if (filters.priority) {
         filteredIssues = filteredIssues.filter(issue => issue.priority === filters.priority);
+      }
+
+      // Apply sorting
+      if (filters.sortBy) {
+        filteredIssues.sort((a, b) => {
+          const aValue = a[filters.sortBy!];
+          const bValue = b[filters.sortBy!];
+          
+          // Handle date fields
+          if (filters.sortBy === 'createdDate' || filters.sortBy === 'updatedDate') {
+            const dateA = new Date(aValue as string).getTime();
+            const dateB = new Date(bValue as string).getTime();
+            return filters.sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+          }
+          
+          // Handle other fields
+          if (aValue < bValue) return filters.sortDirection === 'asc' ? -1 : 1;
+          if (aValue > bValue) return filters.sortDirection === 'asc' ? 1 : -1;
+          return 0;
+        });
       }
 
       const startIndex = (page - 1) * pageSize;
@@ -113,6 +167,19 @@ export class IssueService {
       return issue || null;
     } catch (error) {
       console.error('Error fetching issue:', error);
+      throw error;
+    }
+  }
+
+  async deleteIssue(id: string): Promise<void> {
+    try {
+      const index = DUMMY_ISSUES.findIndex(issue => issue.id === id);
+      if (index === -1) {
+        throw new Error('Issue not found');
+      }
+      DUMMY_ISSUES.splice(index, 1);
+    } catch (error) {
+      console.error('Error deleting issue:', error);
       throw error;
     }
   }
